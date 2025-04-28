@@ -1,5 +1,6 @@
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, Depends
 import os
+from helper.config import get_settings, Settings
 
 base_router = APIRouter(
     prefix="/api/v1", #prefix before all routes
@@ -8,9 +9,10 @@ base_router = APIRouter(
 
 
 @base_router.get("/") # Default route used as healthcheck
-async def welcome(): # use async for better performance
-    app_name = os.getenv("APP_NAME")
-    app_version = os.getenv("APP_VERSION")
+async def welcome(app_settings: Settings = Depends(get_settings)): # use async for better performance
+
+    app_name = app_settings.APP_NAME
+    app_version = app_settings.APP_VERSION
     return {
         "app_name": app_name,
         "app_version": app_version
