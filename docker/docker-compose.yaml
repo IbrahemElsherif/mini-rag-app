@@ -1,0 +1,23 @@
+services:
+    mongodb:
+        image: mongo:7.0-jammy
+        
+        container_name: mongodb
+        
+        ports:
+            - "27007:27017"
+        
+        volumes:
+            - ./mongodb:/data/db
+
+        networks:
+            - backend
+
+        restart: always
+networks:
+    backend:
+
+    # To run -> docker compose filename up 
+    # To run in background-> docker compose filename up -d 
+    # To check what is runnig in the background-> docker compose ps 
+    # stop in the background-> docker compose stop 
