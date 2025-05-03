@@ -1,3 +1,4 @@
+# pylint: disable=trailing-whitespace
 from .BaseDataModel import BaseDataModel
 from .db_schemes import Project
 from .enums.DataBaseEnum import DataBaseEnum
@@ -16,11 +17,10 @@ class ProjectModel(BaseDataModel):
         return project
     
     async def get_project_or_create_one(self, project_id: str):
-        
         record = await self.collection.find_one({
             "project_id":project_id
             })
-        
+
         if record is None:
             # create new project
             project= Project(project_id=project_id)
