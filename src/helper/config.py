@@ -1,6 +1,6 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-
+# Turns .env into a class
 class Settings(BaseSettings):
     
     APP_NAME: str
