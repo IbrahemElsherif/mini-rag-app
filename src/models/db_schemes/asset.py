@@ -31,7 +31,7 @@ class Asset(BaseModel):
                     ("asset_project_id", 1),
                     ("asset_name", 1) # 1 for ascending 
                 ],
-                "name": "asset_project_id_index_1",
+                "name": "asset_project_id_name_index_1",
                 "unique": True # it always unique because its combination of file name an file id
             }
             
