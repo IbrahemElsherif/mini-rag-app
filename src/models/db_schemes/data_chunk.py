@@ -11,3 +11,17 @@ class DataChunk(BaseModel):
 
     class Config:
         arbitrary_types_allowed = True
+
+    @classmethod  # static method 
+    def get_indexes(cls):
+        # definig the shape of the indecies
+        return [
+            {
+                "key": [
+                    ("chunk_project_id", 1) # 1 for ascending 
+                ],
+                "name": "chunk_project_id_index_1",
+                "unique": False # because of multiple chunks with the same project_id
+            }
+        ] 
+    
