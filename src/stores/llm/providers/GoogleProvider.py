@@ -1,4 +1,5 @@
 from google import genai
+from google.genai import types
 import logging
 from ..LLMInterface import LLMInterface
 from ..LLMEnums import GoogleEnums
@@ -52,11 +53,14 @@ class GoogleProvider(LLMInterface):
         max_output_tokens = max_output_tokens if max_output_tokens else self.default_generation_max_output_tokens
         temperature = temperature if temperature else self.default_generation_temperaure
 
-
+    # Add the current prompt to chat history if provided
+        if prompt:
+            chat_history.append(self.construct_prompt(prompt=prompt, role=GoogleEnums.USER.value))
+            
         response = self.client.models.generate_content(
             model = self.generation_model_id,
             contents = chat_history,
-            config = self.client.models.types.GenerateContentConfigOrDict(
+            config = types.GenerateContentConfig(
                 max_tokens = max_output_tokens,
                 temperature = temperature
             )
@@ -67,3 +71,32 @@ class GoogleProvider(LLMInterface):
             return None
     
         return response.text
+    
+    def embed_text(self, text: str, document_type: str=None):
+        if not self.client:
+            self.logger.error("Google client was not set")
+            return None
+        if not self.embedding_model_id:
+            self.logger.error("Embedding model for Google was not set")
+            return None
+        
+        text = self.process_text(text)
+        
+        # According to Google Generative AI SDK documentation
+        embedding_result = self.client.embeddings.embed_content(
+            model=self.embedding_model_id,
+            content=text
+        )
+        
+        if not embedding_result or not hasattr(embedding_result, 'embedding'):
+            self.logger.error("Error while embedding text with Google")
+            return None
+        
+        return embedding_result.embedding
+
+    def construct_prompt(self, prompt: str, role: str):
+        # According to Google Generative AI documentation
+        return {
+            "role": role,
+            "parts": [{"text": self.process_text(prompt)}]
+        }

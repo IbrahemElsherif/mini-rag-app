@@ -23,7 +23,10 @@ class CoHereEnums(Enum):
     QUERY = "search_query"
     
 class GoogleEnums(Enum):
-    pass
+    SYSTEM = "system"
+    USER = "user"
+    ASSISTANT = "assistant"
+    
 class DocumentTypeEnum(Enum):
     DOCUMENT = "document"
     QUERY = "query"
