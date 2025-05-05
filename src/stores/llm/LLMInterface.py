@@ -29,7 +29,7 @@ class LLMInterface(ABC):
 
     
     @abstractmethod # to force using the method
-    def generate_text(self, prompt: str, max_output_tokens:int,
+    def generate_text(self, prompt: str, chat_history: list=[], max_output_tokens: int=None,
                             temperature: float = None):
         """
         Generate text based on the given prompt using the specified parameters.
@@ -45,7 +45,7 @@ class LLMInterface(ABC):
         
     
     @abstractmethod # to force using the method
-    def embed_text(self, text: str, document_type: str):
+    def embed_text(self, text: str, document_type: str=None):
         """
         Embed the given text based on the specified document type.
 
