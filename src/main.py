@@ -60,10 +60,10 @@ app.on_event("startup")(startup_span)
 app.on_event("shutdown")(shutdown_span)
 
 
-# Add a route for the chat interface
-@app.get("/chat")
-async def get_chat():
-    return FileResponse(os.path.join(static_dir, "chat/index.html"))
+# # Add a route for the chat interface
+# @app.get("/chat")
+# async def get_chat():
+#     return FileResponse(os.path.join(static_dir, "chat/index.html"))
 
 app.include_router(base.base_router)
 app.include_router(data.data_router)
