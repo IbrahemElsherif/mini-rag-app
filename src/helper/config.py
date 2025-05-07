@@ -1,4 +1,5 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from typing import Optional
 
 # Turns .env into a class
 class Settings(BaseSettings):
@@ -17,9 +18,9 @@ class Settings(BaseSettings):
     GENERATION_BACKEND : str
     EMBEDDING_BACKEND : str
 
-    OPENAI_API_KEY: str = None
-    OPENAI_API_URL: str = None
-    GOOGLE_API_KEY: str = None
+    OPENAI_API_KEY: Optional[str] = None
+    OPENAI_API_URL: Optional[str] = None
+    GOOGLE_API_KEY: Optional[str] = None
     COHERE_API_KEY: str = None
 
     GENERATION_MODEL_ID: str = None
