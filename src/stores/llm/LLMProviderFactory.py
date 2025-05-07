@@ -7,7 +7,7 @@ class LLMProviderFactory:
         
         self.config = config
         
-    def creat(self, provider: str):
+    def create(self, provider: str):
         
         if provider == LLMEnums.OPENAI.value:
             return OpenAIProvider(

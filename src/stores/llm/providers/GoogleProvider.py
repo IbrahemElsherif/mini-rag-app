@@ -72,6 +72,32 @@ class GoogleProvider(LLMInterface):
     
         return response.text
     
+    # def embed_text(self, text: str, document_type: str=None):
+    #     if not self.client:
+    #         self.logger.error("Google client was not set")
+    #         return None
+    #     if not self.embedding_model_id:
+    #         self.logger.error("Embedding model for Google was not set")
+    #         return None
+            
+    #     text = self.process_text(text)
+       
+    #     embed_config = None
+    #     if document_type:
+    #         embed_config = types.EmbedContentConfig(
+    #             task_type=document_type
+    #             )
+    #     try:    # According to Google Generative AI SDK documentation
+    #         embedding_result = self.client.models.embed_content(
+    #             model=self.embedding_model_id,
+    #             contents=text,  # Parameter is named "contents", not "content"
+    #             config=config
+    #         )
+    #         if not embedding_result or not hasattr(embedding_result, 'embedding'):
+    #             self.logger.error("Error while embedding text with Google")
+    #             return None
+        
+    #     return embedding_result.embeddings
     def embed_text(self, text: str, document_type: str=None):
         if not self.client:
             self.logger.error("Google client was not set")
@@ -79,20 +105,30 @@ class GoogleProvider(LLMInterface):
         if not self.embedding_model_id:
             self.logger.error("Embedding model for Google was not set")
             return None
-        
+            
         text = self.process_text(text)
-        
-        # According to Google Generative AI SDK documentation
-        embedding_result = self.client.embeddings.embed_content(
-            model=self.embedding_model_id,
-            content=text
-        )
-        
-        if not embedding_result or not hasattr(embedding_result, 'embedding'):
-            self.logger.error("Error while embedding text with Google")
+
+        embed_config = None
+        if document_type:
+            embed_config = types.EmbedContentConfig(
+                task_type=document_type
+                )
+        try:    # According to Google Generative AI SDK documentation
+            embedding_result = self.client.models.embed_content(
+                model=self.embedding_model_id,
+                contents=text,  # Parameter is named "contents", not "content"
+                config=embed_config  # Changed from config to embed_config to match the variable name
+            )
+
+            if embedding_result and hasattr(embedding_result, 'embeddings') and len(embedding_result.embeddings) > 0:
+                return embedding_result.embeddings[0].values
+            else:
+                self.logger.error("No embeddings found in response")
+                return None
+
+        except Exception as e:
+            self.logger.error(f"Error while embedding text with Google: {str(e)}")
             return None
-        
-        return embedding_result.embedding
 
     def construct_prompt(self, prompt: str, role: str):
         # According to Google Generative AI documentation

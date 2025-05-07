@@ -4,7 +4,7 @@ from controllers import BaseController
 
 class VectorDBProviderFactory:
     def __init__(self, config):
-        self.config = config 
+        self.config = config
         self.base_controller = BaseController()
     def create(self,  provider: str):
         if provider == VectorDBEnums.QDRANT.value:
