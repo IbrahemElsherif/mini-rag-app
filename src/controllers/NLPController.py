@@ -31,21 +31,55 @@ class NLPController(BaseController):
             json.dumps(collection_info, default=lambda x: x.__dict__)
         )
     
-    def index_into_vector_db(self, project: Project, chunks: List[DataChunk],
-                                chunks_ids: List[int], 
-                                do_reset: bool = False):
+    # def index_into_vector_db(self, project: Project, chunks: List[DataChunk],
+    #                             chunks_ids: List[int], 
+    #                             do_reset: bool = False):
         
+    #     # step1: get collection name
+    #     collection_name = self.create_collection_name(project_id=project.project_id)
+
+    #     # step2: manage items
+    #     texts = [ c.chunk_text for c in chunks ]
+    #     metadata = [ c.chunk_metadata for c in  chunks]
+    #     vectors = [
+    #         self.embedding_client.embed_text(text=text, 
+    #                                         document_type=DocumentTypeEnum.DOCUMENT.value)
+    #         for text in texts
+    #     ]
+
+    #     # step3: create collection if not exists
+    #     _ = self.vectordb_client.create_collection(
+    #         collection_name=collection_name,
+    #         embedding_size=self.embedding_client.embedding_size,
+    #         do_reset=do_reset,
+    #     )
+
+    #     # step4: insert into vector db
+    #     _ = self.vectordb_client.insert_many(
+    #         collection_name=collection_name,
+    #         texts=texts,
+    #         metadata=metadata,
+    #         vectors=vectors,
+    #         record_ids=chunks_ids,
+    #     )
+
+    #     return True
+
+    def index_into_vector_db(self, project: Project, chunks: List[DataChunk],
+                               chunks_ids: List[int], 
+                               do_reset: bool = False):
         # step1: get collection name
         collection_name = self.create_collection_name(project_id=project.project_id)
 
         # step2: manage items
-        texts = [ c.chunk_text for c in chunks ]
-        metadata = [ c.chunk_metadata for c in  chunks]
-        vectors = [
-            self.embedding_client.embed_text(text=text, 
-                                            document_type=DocumentTypeEnum.DOCUMENT.value)
-            for text in texts
-        ]
+        texts = [c.chunk_text for c in chunks]
+        metadata = [c.chunk_metadata for c in chunks]
+        
+        # Use batch embedding instead of individual embeddings
+        vectors = self.embedding_client.embed_texts(
+            texts=texts,
+            document_type=DocumentTypeEnum.DOCUMENT.value
+        )
 
         # step3: create collection if not exists
         _ = self.vectordb_client.create_collection(
@@ -64,7 +98,7 @@ class NLPController(BaseController):
         )
 
         return True
-
+    
     def search_vector_db_collection(self, project: Project, text: str, limit: int = 10):
 
         # step1: get collection name
