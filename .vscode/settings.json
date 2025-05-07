@@ -1,0 +1,12 @@
+{
+    "pylint.enabled": false,
+    "[python]": {
+        "editor.formatOnSave": false,
+        "editor.defaultFormatter": null
+    },
+    "files.trimTrailingWhitespace": false,
+    "python.linting.pylintArgs": [
+        "--disable=C0114,C0115,C0116"
+    ],
+    "python.languageServer": "Pylance"
+}

@@ -1,0 +1,39 @@
+services:
+    mongodb:
+        image: mongo:7.0-jammy
+        
+        container_name: mongodb
+        
+        ports:
+            - "27007:27017"
+        
+        volumes:
+            - mongodata:/data/db
+
+        environment:
+            - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
+            - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
+
+        networks:
+            - backend
+
+        restart: always
+networks:
+    backend:
+
+volumes:
+    mongodata:
+
+
+
+    # To run -> docker compose filename up 
+    # To run in background-> docker compose filename up -d 
+    # To check what is runnig in the background-> docker compose ps 
+    # stop in the background-> docker compose stop 
+    # IN THE LOCAL DEVELOPMENT only for the following commands
+    # sudo docker stop $(sudo docker ps -aq) -> to stop dockers
+    # sudo docker rm $(sudo docker ps -aq) -> to remove all containers outputs ids for the removed dockers
+    # sudo docker rmi $(sudo docker images -q) -> remove images
+    # sudo docker volume rm $(sudo docker volume ls -q)  -> remove all the volumes 
+    ### we can replace the $(sudo docker volume ls -q) -> with the id of the certain container in any of the above commands
+    # sudo docker system prune --all -> clean all 
