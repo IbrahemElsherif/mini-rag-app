@@ -40,7 +40,8 @@ async def index_project(request: Request, project_id: str, push_request: PushReq
     nlp_controller = NLPController(
         vectordb_client=request.app.vectordb_client,
         generation_client=request.app.generation_client,
-        embedding_client=request.app.embedding_client
+        embedding_client=request.app.embedding_client,
+        template_parser=request.app.template_parser,
     )
 
     has_records = True
@@ -87,7 +88,7 @@ async def index_project(request: Request, project_id: str, push_request: PushReq
     # chunks = chunk_model.get_project_chunks(project_id=project.id)
 
 
-@nlp_router.get("/index/info/{project_id}")
+@nlp_router.post("/index/info/{project_id}")
 async def get_project_index_info(request: Request, project_id: str):
     
     project_model = await ProjectModel.create_instance(
@@ -102,6 +103,7 @@ async def get_project_index_info(request: Request, project_id: str):
         vectordb_client=request.app.vectordb_client,
         generation_client=request.app.generation_client,
         embedding_client=request.app.embedding_client,
+        template_parser=request.app.template_parser
     )
 
     collection_info = nlp_controller.get_vector_db_collection_info(project=project)
@@ -128,7 +130,7 @@ async def search_index(request: Request, project_id: str, search_request: Search
         vectordb_client=request.app.vectordb_client,
         generation_client=request.app.generation_client,
         embedding_client=request.app.embedding_client,
-        template_parser=request.app.template_parser,
+        template_parser=request.app.template_parser
     )
 
     results = nlp_controller.search_vector_db_collection(
@@ -150,8 +152,8 @@ async def search_index(request: Request, project_id: str, search_request: Search
         }
     )
     
-# @nlp_router.post("/index/answer/{project_id}")
-# async def answer_rag(request: Request, project_id: str, search_request: SearchRequest):
+@nlp_router.post("/index/answer/{project_id}")
+async def answer_rag(request: Request, project_id: str, search_request: SearchRequest):
     
     project_model = await ProjectModel.create_instance(
         db_client=request.app.db_client

@@ -9,7 +9,7 @@ class OpenAIProvider(LLMInterface):
     def __init__(self, api_key: str, api_url: str=None,
                         default_input_max_characters: int=1000,
                         default_generation_max_output_tokens: int=1000,
-                        default_generation_temperaure: float=0.1):
+                        default_generation_temperaure: float=0.1,**kwargs):
         
         self.api_key = api_key
         self.api_url = api_url
@@ -25,9 +25,9 @@ class OpenAIProvider(LLMInterface):
         
         self.client = OpenAI(
             api_key = self.api_key,
-            api_url = self.api_url
+            base_url = self.api_url if self.api_url and len(self.api_url) else None
         )
-        
+        self.enums = OpenAIEnums
         self.logger = logging.getLogger(__name__)
 
     def set_generation_model(self, model_id: str):
@@ -66,12 +66,12 @@ class OpenAIProvider(LLMInterface):
                     max_tokens = max_output_tokens,
                     temperature = temperature
                 )
-        
+
         if not response or not response.choices or len(response.choices) == 0 or not response.choices[0].messagge:
             self.logger.error("Error while generating text with OpenAI")
             return None
-        
-        return response.choices[0].messages["content"]
+
+        return response.choices[0].messages.content
 
     def embed_text(self, text: str, document_type: str=None):
         

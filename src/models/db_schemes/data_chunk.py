@@ -26,3 +26,19 @@ class DataChunk(BaseModel):
             }
         ] 
     
+# class RetrievedDocument(BaseModel):
+#     id: str = None
+#     score: float 
+#     text: str  # This is the required field that was missing
+#     metadata: dict = None
+    
+#     def dict(self):
+#         return {
+#             "id": self.id,
+#             "score": self.score,
+#             "text": self.text,
+#             "metadata": self.metadata
+#         }
+class RetrievedDocument(BaseModel):
+    text: str
+    score: float

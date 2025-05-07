@@ -7,13 +7,13 @@ import json
 class NLPController(BaseController):
 
     def __init__(self, vectordb_client, generation_client, 
-                embedding_client):
+                embedding_client, template_parser):
         super().__init__()
 
         self.vectordb_client = vectordb_client
         self.generation_client = generation_client
         self.embedding_client = embedding_client
-        # self.template_parser = template_parser
+        self.template_parser = template_parser
 
     def create_collection_name(self, project_id: str):
         return f"collection_{project_id}".strip()
@@ -30,40 +30,6 @@ class NLPController(BaseController):
         return json.loads(
             json.dumps(collection_info, default=lambda x: x.__dict__)
         )
-    
-    # def index_into_vector_db(self, project: Project, chunks: List[DataChunk],
-    #                             chunks_ids: List[int], 
-    #                             do_reset: bool = False):
-        
-    #     # step1: get collection name
-    #     collection_name = self.create_collection_name(project_id=project.project_id)
-
-    #     # step2: manage items
-    #     texts = [ c.chunk_text for c in chunks ]
-    #     metadata = [ c.chunk_metadata for c in  chunks]
-    #     vectors = [
-    #         self.embedding_client.embed_text(text=text, 
-    #                                         document_type=DocumentTypeEnum.DOCUMENT.value)
-    #         for text in texts
-    #     ]
-
-    #     # step3: create collection if not exists
-    #     _ = self.vectordb_client.create_collection(
-    #         collection_name=collection_name,
-    #         embedding_size=self.embedding_client.embedding_size,
-    #         do_reset=do_reset,
-    #     )
-
-    #     # step4: insert into vector db
-    #     _ = self.vectordb_client.insert_many(
-    #         collection_name=collection_name,
-    #         texts=texts,
-    #         metadata=metadata,
-    #         vectors=vectors,
-    #         record_ids=chunks_ids,
-    #     )
-
-    #     return True
 
     def index_into_vector_db(self, project: Project, chunks: List[DataChunk],
                                chunks_ids: List[int], 
@@ -146,7 +112,7 @@ class NLPController(BaseController):
                     "chunk_text": doc.text,
             })
             for idx, doc in enumerate(retrieved_documents)
-        ])
+        ]) 
 
         footer_prompt = self.template_parser.get("rag", "footer_prompt")
 
