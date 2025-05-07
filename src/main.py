@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from routes import base, data, nlp
 from helper.config import get_settings
@@ -11,6 +12,16 @@ import os
 
 app = FastAPI()
 
+
+app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # أو حدد دومين موقعك بدل النجمة
+    allow_credentials=True,
+    allow_methods=["*"],  # لازم تكون فيها "OPTIONS"
+    allow_headers=["*"],
+)
 # Define static directory with absolute path
 current_dir = os.path.dirname(os.path.abspath(__file__))
 static_dir = os.path.join(current_dir, "static")
