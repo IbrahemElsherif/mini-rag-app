@@ -1,12 +1,22 @@
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from motor.motor_asyncio import AsyncIOMotorClient
 from routes import base, data, nlp
 from helper.config import get_settings
 from stores.llm.LLMProviderFactory import LLMProviderFactory
 from stores.vectordb.VectorDBProviderFactory import VectorDBProviderFactory
 from stores.llm.templatess.template_parser import TemplateParser
+import os
 
 app = FastAPI()
+
+# Define static directory with absolute path
+current_dir = os.path.dirname(os.path.abspath(__file__))
+static_dir = os.path.join(current_dir, "static")
+
+# Mount the static files directory
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 async def startup_span():
     settings = get_settings()
@@ -50,6 +60,17 @@ app.on_event("startup")(startup_span)
 app.on_event("shutdown")(shutdown_span)
 
 
+# Add a route for the chat interface
+@app.get("/chat")
+async def get_chat():
+    return FileResponse(os.path.join(static_dir, "chat/index.html"))
+
 app.include_router(base.base_router)
 app.include_router(data.data_router)
 app.include_router(nlp.nlp_router)
+
+# # Add a route to serve the chat interface
+# @app.get("/chat")
+# async def chat_interface():
+#     from fastapi.responses import FileResponse
+#     return FileResponse(os.path.join(static_dir, "chat/index.html"))

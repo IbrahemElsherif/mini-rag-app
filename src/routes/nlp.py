@@ -163,6 +163,8 @@ async def answer_rag(request: Request, project_id: str, search_request: SearchRe
         project_id=project_id
     )
 
+    print(f"Received project_id: {project_id}")
+    
     nlp_controller = NLPController(
         vectordb_client=request.app.vectordb_client,
         generation_client=request.app.generation_client,

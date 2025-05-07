@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مساعد طلاب المعهد السعودي</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+        
+        #chat-window {
+            height: calc(100vh - 180px);
+            min-height: 300px;
+        }
+        
+        .message {
+            max-width: 80%;
+            margin-bottom: 10px;
+            padding: 10px 15px;
+            border-radius: 15px;
+            animation: fadeIn 0.3s;
+        }
+        
+        .user-message {
+            align-self: flex-start;
+            background-color: #e3f2fd;
+            border-bottom-left-radius: 4px;
+        }
+        
+        .bot-message {
+            align-self: flex-end;
+            background-color: #f1f1f1;
+            border-bottom-right-radius: 4px;
+        }
+        
+        .message-content {
+            word-wrap: break-word;
+            white-space: pre-wrap;
+        }
+        
+        .typing-indicator {
+            align-self: flex-end;
+            background-color: #f1f1f1;
+            border-bottom-right-radius: 4px;
+            padding: 10px 15px;
+            border-radius: 15px;
+            display: inline-flex;
+            align-items: center;
+        }
+        
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            margin: 0 1px;
+            background-color: #606060;
+            border-radius: 50%;
+            opacity: 0.6;
+            animation: typingAnimation 1s infinite;
+        }
+        
+        .typing-dot:nth-child(1) { animation-delay: 0s; }
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+        
+        @keyframes typingAnimation {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-5px); }
+            100% { transform: translateY(0px); }
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 h-screen flex flex-col">
+    <div class="container mx-auto p-4 flex-1 flex flex-col max-w-4xl">
+        <!-- Header - Changed to dark green -->
+        <header class="bg-green-800 text-white p-4 rounded-t-lg shadow-md">
+            <h1 class="text-xl font-bold flex items-center">
+                <i class="fas fa-robot ml-2"></i> مساعد طلاب المعهد السعودي
+            </h1>
+        </header>
+
+        <!-- Chat Window - Notice we swapped alignment for RTL -->
+        <div id="chat-window" class="flex-1 bg-white overflow-y-auto p-4 flex flex-col gap-4 shadow-inner">
+            <div class="message bot-message">
+                <div class="message-content">
+                    مرحبا معك مساعد طلاب المعهد السعودي كيف يمكنني مساعدتك اليوم؟
+                </div>
+            </div>
+        </div>
+
+        <!-- Input Area - Changed to dark green -->
+        <div class="p-4 bg-gray-200 rounded-b-lg shadow-md">
+            <div class="flex gap-2">
+                <input 
+                    id="user-input" 
+                    type="text" 
+                    placeholder="اكتب استفسارك هنا..." 
+                    class="flex-1 rounded-md border-gray-300 shadow-sm px-3 py-2 text-right"
+                >
+                <button 
+                    id="send-button" 
+                    class="bg-green-800 text-white px-4 py-2 rounded-md hover:bg-green-900 transition shadow-sm flex items-center"
+                >
+                    <span>إرسال</span>
+                    <i class="fas fa-paper-plane mr-2"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM Elements
+            const chatWindow = document.getElementById('chat-window');
+            const userInput = document.getElementById('user-input');
+            const sendButton = document.getElementById('send-button');
+        
+            // API endpoint
+            const API_URL = '/api/v1/nlp/index/answer/';
+            
+            // Default project ID - Changed to alphanumeric only (no underscores)
+            const DEFAULT_PROJECT_ID = 'project';  // Make sure this project exists in your database
+        
+            // Event listeners
+            sendButton.addEventListener('click', handleUserInput);
+            userInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    handleUserInput();
+                }
+            });
+        
+            // Handle user input
+            function handleUserInput() {
+                const message = userInput.value.trim();
+                if (message === '') return;
+        
+                // Add user message to chat
+                appendMessage(message, 'user');
+                
+                // Clear input field
+                userInput.value = '';
+                
+                // Show typing indicator
+                showTypingIndicator();
+                
+                // Call RAG API
+                fetchAnswer(message, DEFAULT_PROJECT_ID);
+            }
+        
+            // Append message to chat window
+            function appendMessage(message, sender) {
+                const messageDiv = document.createElement('div');
+                messageDiv.classList.add('message', sender === 'user' ? 'user-message' : 'bot-message');
+                
+                const messageContent = document.createElement('div');
+                messageContent.classList.add('message-content');
+                messageContent.textContent = message;
+                
+                messageDiv.appendChild(messageContent);
+                chatWindow.appendChild(messageDiv);
+                
+                // Scroll to bottom
+                chatWindow.scrollTop = chatWindow.scrollHeight;
+            }
+        
+            // Show typing indicator
+            function showTypingIndicator() {
+                const typingDiv = document.createElement('div');
+                typingDiv.classList.add('typing-indicator');
+                typingDiv.id = 'typing-indicator';
+                
+                for (let i = 0; i < 3; i++) {
+                    const dot = document.createElement('div');
+                    dot.classList.add('typing-dot');
+                    typingDiv.appendChild(dot);
+                }
+                
+                chatWindow.appendChild(typingDiv);
+                chatWindow.scrollTop = chatWindow.scrollHeight;
+            }
+        
+            // Remove typing indicator
+            function removeTypingIndicator() {
+                const typingIndicator = document.getElementById('typing-indicator');
+                if (typingIndicator) {
+                    typingIndicator.remove();
+                }
+            }
+            console.log("Making request to:", API_URL + projectId);
+            console.log("With question:", question);
+            // Fetch answer from RAG API
+            async function fetchAnswer(question, projectId) {
+                try {
+                    console.log(`Calling API with project ID: ${projectId}`);
+                    const response = await fetch(`/api/v1/nlp/index/answer/${projectId}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            text: question,
+                            limit: 5
+                        }),
+                    });
+        
+                    if (!response.ok) {
+                        throw new Error(`API request failed with status: ${response.status}`);
+                    }
+        
+                    const data = await response.json();
+                    console.log('API response:', data);
+                    
+                    // Remove typing indicator
+                    removeTypingIndicator();
+                    
+                    // Display bot response
+                    if (data.signal === 'rag_answer_success') {
+                        appendMessage(data.answer, 'bot');
+                    } else {
+                        appendMessage("عذراً، لم أتمكن من العثور على إجابة لسؤالك.", 'bot');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    
+                    // Remove typing indicator
+                    removeTypingIndicator();
+                    
+                    // Display error message
+                    appendMessage("عذراً، حدث خطأ أثناء معالجة طلبك.", 'bot');
+                }
+            }
+        });
+    </script>
+</body>
+</html>
