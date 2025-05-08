@@ -95,16 +95,8 @@ async def upload_data(request: Request, project_id: str, file: UploadFile,
     # })
 
 @data_router.post("/process/{project_id}")
-async def process_endpoint(request: Request,project_id: str, process_request: ProcessRequest):
+async def process_endpoint(request: Request, project_id: str, process_request: ProcessRequest):
     
-    # file_id = process_request.file_id # not essential
-    # In routes/data.py - process_endpoint function
-    if process_request.file_id:
-        # Get asset by ID instead of name
-        from bson.objectid import ObjectId
-        asset_record = await asset_model.get_asset_by_id(
-            ObjectId(process_request.file_id)
-        )
     chunk_size = process_request.chunk_size
     overlap_size = process_request.overlap_size
     do_reset = process_request.do_reset
@@ -119,28 +111,30 @@ async def process_endpoint(request: Request,project_id: str, process_request: Pr
     
     asset_model = await AssetModel.create_instance(
         db_client=request.app.db_client
-        )
+    )
         
     # in case we have one file or more
     project_files_ids = {}
 
     if process_request.file_id:
-        asset_record = await asset_model.get_asset_record(
-            asset_project_id=project.id,
-            asset_name=process_request.file_id,
+        # Use get_asset_by_id instead of get_asset_record
+        from bson.objectid import ObjectId
+        asset_record = await asset_model.get_asset_by_id(
+            ObjectId(process_request.file_id)
         )
         
         if asset_record is None:
             return JSONResponse(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 content={
-                    "signal":ResponseSignal.FILE_ID_ERROR.value,
+                    "signal": ResponseSignal.FILE_ID_ERROR.value,
                 }
             ) 
     
         project_files_ids = {
             asset_record.id: asset_record.asset_name
-            }
+        }
+
     else:
         
         project_files = await asset_model.get_all_projects_assets(
