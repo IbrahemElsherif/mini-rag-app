@@ -8,6 +8,11 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from models import ProcessingEnum
 from langchain_community.document_loaders import JSONLoader
 import json
+import logging
+import traceback
+from langchain.schema import Document
+
+logger = logging.getLogger('uvicorn.error')
 
 class ProcessController(BaseController):
     
@@ -27,41 +32,61 @@ class ProcessController(BaseController):
             file_id
         )
         
-        # check if file exists
+        # Check if file exists
         if not os.path.exists(file_path):
+            logger.error(f"File not found: {file_path}")
             return None
         
         # Check if its txt
         if file_ext == ProcessingEnum.TXT.value:
-            return TextLoader(file_path, encoding="utf-8")
+            try:
+                return TextLoader(file_path, encoding="utf-8")
+            except Exception as e:
+                logger.error(f"Error loading text file {file_id}: {str(e)}")
+                return None
+            
         # Check if its pdf
         if file_ext == ProcessingEnum.PDF.value:
             try:
-                # Add error handling for PDF loading
-                loader = PyMuPDFLoader(file_path)
-                # Test if the loader works by loading a sample
-                test = loader.load_and_split()
-                return loader
-            except Exception as e:
-                print(f"Error loading PDF {file_id}: {str(e)}")
-                # Fallback to plain text extraction if PyMuPDF fails
-                import pdfplumber
-                class SimplePDFLoader:
+                # Create a safe PDF loader class that handles errors
+                class SafePyMuPDFLoader:
                     def __init__(self, file_path):
                         self.file_path = file_path
                     
                     def load(self):
-                        from langchain.schema import Document
-                        text = ""
-                        with pdfplumber.open(self.file_path) as pdf:
-                            for page in pdf.pages:
-                                text += page.extract_text() or ""
-                                text += "\n\n"
-                        
-                        metadata = {"source": self.file_path}
-                        return [Document(page_content=text, metadata=metadata)]
+                        try:
+                            # Try PyMuPDF first
+                            loader = PyMuPDFLoader(self.file_path)
+                            return loader.load()
+                        except Exception as e:
+                            logger.error(f"PyMuPDF failed: {str(e)}")
+                            logger.error(traceback.format_exc())
+                            
+                            # Fallback to manual PDF text extraction
+                            try:
+                                import fitz  # PyMuPDF
+                                text = ""
+                                metadata = {"source": self.file_path}
+                                
+                                doc = fitz.open(self.file_path)
+                                for page_num, page in enumerate(doc):
+                                    text += page.get_text()
+                                    text += "\n\n"
+                                
+                                # Return at least something if we found text
+                                if text.strip():
+                                    return [Document(page_content=text, metadata=metadata)]
+                                return []
+                            except Exception as inner_e:
+                                logger.error(f"Fallback PDF extraction failed: {str(inner_e)}")
+                                # Return empty document rather than failing
+                                return [Document(page_content="", metadata={"source": self.file_path, "error": "Failed to extract text"})]
                 
-                return SimplePDFLoader(file_path)
+                return SafePyMuPDFLoader(file_path)
+                
+            except Exception as e:
+                logger.error(f"Error setting up PDF loader for {file_id}: {str(e)}")
+                return None
         
         return None
     
@@ -76,26 +101,43 @@ class ProcessController(BaseController):
     
     def process_file_content(self, file_content: list, file_id: str, 
                             chunk_size: int=1000, overlap_size: int=200):
-    
-        text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=chunk_size,
-            chunk_overlap=overlap_size,
-            length_function=len, # can be lambda function
-        )
+        # If file_content is empty or None, return empty list instead of None
+        if not file_content or len(file_content) == 0:
+            logger.error(f"No content found in file: {file_id}")
+            return []
         
-        file_content_texts = [
-            rec.page_content
-            for rec in file_content
-        ]
-        
-        file_content_metadata = [
-            rec.metadata
-            for rec in file_content
-        ]
-        
-        chunks = text_splitter.create_documents(
-            file_content_texts,
-            metadatas=file_content_metadata # to get meta data for each subof text
-        )
-        
-        return chunks
+        try:
+            text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=chunk_size,
+                chunk_overlap=overlap_size,
+                length_function=len,
+            )
+            
+            file_content_texts = [
+                rec.page_content
+                for rec in file_content
+                # Skip empty content
+                if hasattr(rec, 'page_content') and rec.page_content and rec.page_content.strip()
+            ]
+            
+            # If we have no valid text content, return empty list
+            if not file_content_texts:
+                logger.error(f"No valid text content in file: {file_id}")
+                return []
+            
+            file_content_metadata = [
+                rec.metadata
+                for rec in file_content
+                if hasattr(rec, 'page_content') and rec.page_content and rec.page_content.strip()
+            ]
+            
+            chunks = text_splitter.create_documents(
+                file_content_texts,
+                metadatas=file_content_metadata
+            )
+            
+            return chunks
+        except Exception as e:
+            logger.error(f"Error processing file content for {file_id}: {str(e)}")
+            logger.error(traceback.format_exc())
+            return []

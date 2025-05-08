@@ -176,7 +176,7 @@ async def process_endpoint(request: Request, project_id: str, process_request: P
         
         if file_content is None:
             logger.error(f"Error while processing file: {file_id}")
-            continue
+            continue  # Skip this file but continue with others
         
         file_chunks = process_controller.process_file_content(
             file_content=file_content,
@@ -186,12 +186,8 @@ async def process_endpoint(request: Request, project_id: str, process_request: P
             )
         
         if file_chunks is None or len(file_chunks) == 0:
-            return JSONResponse(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                content={
-                    "signal":ResponseSignal.PROCESSING_FAILED.value
-                }
-            ) 
+            logger.error(f"No chunks generated for file: {file_id}")
+            continue  # Skip this file but continue with others instead of returning error
         
         file_chunks_records = [
             DataChunk(
@@ -206,6 +202,17 @@ async def process_endpoint(request: Request, project_id: str, process_request: P
         
         no_records += await chunk_model.insert_many_chunks(chunks=file_chunks_records)
         no_files += 1
+
+    # At the end, check if we processed anything
+    if no_files == 0:
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={
+                "signal":ResponseSignal.PROCESSING_FAILED.value,
+                "message": "Failed to process any files"
+            }
+        )
+
     return JSONResponse(
         content={
             "signal": ResponseSignal.PROCESSING_SUCCESS.value,

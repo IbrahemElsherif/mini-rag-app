@@ -91,19 +91,30 @@ class NLPController(BaseController):
         return results
     
     def answer_rag_question(self, project: Project, query: str, limit: int = 10):
+        # Define common questions with exact answers
+        common_questions = {
+            "من أنت": "أنا مساعد طلاب ومتدربين المعهد السعودي العالي المتخصص للتدريب، هنا لمساعدتك ومعلوماتك عن برامج المعهد.",
+            "من انت": "أنا مساعد طلاب ومتدربين المعهد السعودي العالي المتخصص للتدريب، هنا لمساعدتك ومعلوماتك عن برامج المعهد.",
+            "عرف نفسك": "أنا مساعد طلاب ومتدربين المعهد السعودي العالي المتخصص للتدريب، هنا لمساعدتك ومعلوماتك عن برامج المعهد.",
+        }
+        
+        # Check for common questions first
+        for question_fragment, predefined_answer in common_questions.items():
+            if question_fragment in query.lower():
+                return predefined_answer, "", []
+        
+        # Process other questions
         answer, full_prompt, chat_history = None, None, None
-
-        # Step 1: retrieve related documents
+        
+        # Get related documents
         retrieved_documents = self.search_vector_db_collection(
             project=project,
             text=query,
             limit=limit,
         )
-
-        # If no documents found or they're empty, return a predefined Arabic response
+        
         if not retrieved_documents or len(retrieved_documents) == 0:
-            default_arabic_response = "عذراً، لا توجد لدي معلومات كافية عن هذا الموضوع. يرجى التواصل مع المعهد السعودي العالي للحصول على مزيد من المعلومات."
-            return default_arabic_response, full_prompt, chat_history
+            return "عذراً، لا توجد لدي معلومات كافية عن هذا الموضوع. يرجى التواصل مع المعهد السعودي العالي للحصول على مزيد من المعلومات.", "", []
         
         # step2: Construct LLM prompt
         system_prompt = self.template_parser.get("rag", "system_prompt")
@@ -136,28 +147,54 @@ class NLPController(BaseController):
             chat_history=chat_history
         )
         
-        # After getting the answer, ensure it's in Arabic, not English
+        # CRITICAL: Complete replacement of post-processing
         if answer:
-            # Check if the answer contains primarily English text
-            english_ratio = len(re.findall(r'[a-zA-Z]', answer)) / max(len(answer), 1)
+            import re
             
-            # If more than 30% of characters are English, replace with Arabic default
-            if english_ratio > 0.3:
-                answer = "عذراً، لا توجد لدي معلومات كافية عن هذا الموضوع. يرجى التواصل مع المعهد السعودي العالي للحصول على مزيد من المعلومات."
+            # DRASTIC APPROACH: Extract only clear Arabic text content
+            # This removes ALL document markers, formatting, English text
             
-            # Remove document markers and headers completely
-            answer = re.sub(r'##\s*Document No:\s*\d+.*?##', '', answer, flags=re.DOTALL)
-            answer = re.sub(r'Document No:\s*\d+.*?Content:', '', answer, flags=re.DOTALL)
-            answer = re.sub(r'###\s*Content:.*?###', '', answer, flags=re.DOTALL)
-            answer = re.sub(r'Content:.*?:', '', answer, flags=re.DOTALL)
+            # 1. Remove any line with document markers
+            lines = answer.split('\n')
+            clean_lines = []
+            for line in lines:
+                if not any(marker in line.lower() for marker in [
+                    'document', 'content', 'المستند', 'المحتوى', '##', '###', 
+                    'doc', 'no:', 'رقم:'
+                ]):
+                    clean_lines.append(line)
             
-            # Remove any remaining markdown symbols
+            # 2. Join filtered lines
+            answer = '\n'.join(clean_lines)
+            
+            # 3. Apply more aggressive cleaning
+            # Remove any remaining document markers
+            patterns = [
+                r'document no:.*?content:',
+                r'document \d+:.*?content:',
+                r'##.*?##',
+                r'###.*?###',
+                r'المستند رقم:.*?المحتوى:',
+                r'المستند \d+:.*?المحتوى:',
+                r'content:.*?:',
+            ]
+            
+            for pattern in patterns:
+                answer = re.sub(pattern, '', answer, flags=re.DOTALL|re.IGNORECASE)
+            
+            # 4. Remove any single-character lines which are often remnants
+            lines = answer.split('\n')
+            answer = '\n'.join([l for l in lines if len(l.strip()) > 1])
+            
+            # 5. Final cleanup
             answer = re.sub(r'[#]+', '', answer)
-            
-            # Clean up multiple spaces and newlines
-            answer = re.sub(r'\n{2,}', '\n\n', answer)
+            answer = re.sub(r'\n{3,}', '\n\n', answer)
             answer = re.sub(r'\s{2,}', ' ', answer)
             answer = answer.strip()
+            
+            # 6. Validate if answer still contains document markers
+            if any(marker in answer.lower() for marker in ['document', 'content', '##', '###']):
+                return "عذراً، لا توجد لدي معلومات كافية عن هذا الموضوع. يرجى التواصل مع المعهد السعودي العالي للحصول على مزيد من المعلومات.", "", []
         
         return answer, full_prompt, chat_history
 
