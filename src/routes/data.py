@@ -88,18 +88,29 @@ async def upload_data(request: Request, project_id: str, file: UploadFile,
                 # "project_id": str(project._id) # turned into string because its bson data type
             }
         ) 
+    # return JSONResponse({
+    #     "signal": ResponseSignal.FILE_UPLOAD_SUCESS.value,
+    #     "file_id": asset_record.asset_name,  # Return filename instead of ObjectID
+    #     "asset_id": str(asset_record.id)  # Still include ObjectID if needed
+    # })
 
 @data_router.post("/process/{project_id}")
 async def process_endpoint(request: Request,project_id: str, process_request: ProcessRequest):
     
     # file_id = process_request.file_id # not essential
-    
+    # In routes/data.py - process_endpoint function
+    if process_request.file_id:
+        # Get asset by ID instead of name
+        from bson.objectid import ObjectId
+        asset_record = await asset_model.get_asset_by_id(
+            ObjectId(process_request.file_id)
+        )
     chunk_size = process_request.chunk_size
     overlap_size = process_request.overlap_size
     do_reset = process_request.do_reset
     
     project_model = await ProjectModel.create_instance(
-        db_client=request.app.db_client 
+        db_client=request.app.db_client
     )
     
     project = await project_model.get_project_or_create_one(
