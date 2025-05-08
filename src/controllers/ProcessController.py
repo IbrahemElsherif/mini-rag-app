@@ -21,12 +21,11 @@ class ProcessController(BaseController):
         return os.path.splitext(file_id)[-1]
     
     def get_file_loader(self, file_id: str):
-        
         file_ext = self.get_file_extension(file_id=file_id)
         file_path = os.path.join(
             self.project_path, 
             file_id
-            )
+        )
         
         # check if file exists
         if not os.path.exists(file_path):
@@ -34,18 +33,35 @@ class ProcessController(BaseController):
         
         # Check if its txt
         if file_ext == ProcessingEnum.TXT.value:
-            with open(file_path, 'r', encoding='utf-8') as f:
-                try:
-                    # Try to parse as JSON
-                    json.loads(f.read())
-                    # If it parses successfully, return a TextLoader with proper encoding
-                    return TextLoader(file_path, encoding="utf-8")
-                except json.JSONDecodeError:
-                    # Not JSON, proceed with regular TextLoader
-                    return TextLoader(file_path, encoding="utf-8")
+            return TextLoader(file_path, encoding="utf-8")
         # Check if its pdf
         if file_ext == ProcessingEnum.PDF.value:
-            return PyMuPDFLoader(file_path)    
+            try:
+                # Add error handling for PDF loading
+                loader = PyMuPDFLoader(file_path)
+                # Test if the loader works by loading a sample
+                test = loader.load_and_split()
+                return loader
+            except Exception as e:
+                print(f"Error loading PDF {file_id}: {str(e)}")
+                # Fallback to plain text extraction if PyMuPDF fails
+                import pdfplumber
+                class SimplePDFLoader:
+                    def __init__(self, file_path):
+                        self.file_path = file_path
+                    
+                    def load(self):
+                        from langchain.schema import Document
+                        text = ""
+                        with pdfplumber.open(self.file_path) as pdf:
+                            for page in pdf.pages:
+                                text += page.extract_text() or ""
+                                text += "\n\n"
+                        
+                        metadata = {"source": self.file_path}
+                        return [Document(page_content=text, metadata=metadata)]
+                
+                return SimplePDFLoader(file_path)
         
         return None
     
