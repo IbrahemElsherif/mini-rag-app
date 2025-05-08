@@ -3,6 +3,7 @@ from models.db_schemes import Project, DataChunk
 from stores.llm.LLMEnums import DocumentTypeEnum
 from typing import List
 import json
+import re
 
 class NLPController(BaseController):
 
@@ -93,7 +94,14 @@ class NLPController(BaseController):
         
         answer, full_prompt, chat_history = None, None, None
 
-        # step1: retrieve related documents
+        # Check if this is an identity question
+        identity_questions = ["من انت", "من أنت", "عرف نفسك", "ما هويتك", "من تكون"]
+        if any(q in query.lower() for q in identity_questions):
+            # Return predefined identity without searching documents
+            answer = "أنا مساعد طلاب متدربين المعهد السعودي العالي المتخصص للتدريب، وأنا هنا للإجابة على استفساراتك حول المعهد ودوراته التدريبية ودبلوماته."
+            return answer, "", chat_history
+
+        # Continue with normal document retrieval for other questions
         retrieved_documents = self.search_vector_db_collection(
             project=project,
             text=query,
@@ -133,6 +141,22 @@ class NLPController(BaseController):
             prompt=full_prompt,
             chat_history=chat_history
         )
-
+        
+        # Improved post-processing
+        if answer:
+            # Remove document markers and headers completely
+            answer = re.sub(r'##\s*Document No:\s*\d+.*?##', '', answer, flags=re.DOTALL)
+            answer = re.sub(r'Document No:\s*\d+.*?Content:', '', answer, flags=re.DOTALL)
+            answer = re.sub(r'###\s*Content:.*?###', '', answer, flags=re.DOTALL)
+            answer = re.sub(r'Content:.*?:', '', answer, flags=re.DOTALL)
+            
+            # Remove any remaining markdown symbols
+            answer = re.sub(r'[#]+', '', answer)
+            
+            # Clean up multiple spaces and newlines
+            answer = re.sub(r'\n{2,}', '\n\n', answer)
+            answer = re.sub(r'\s{2,}', ' ', answer)
+            answer = answer.strip()
+        
         return answer, full_prompt, chat_history
 
