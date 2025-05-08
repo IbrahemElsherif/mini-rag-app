@@ -64,3 +64,13 @@ class AssetModel(BaseDataModel):
             return Asset(**record)
         
         return None 
+    
+    async def get_asset_by_id(self, asset_id: ObjectId):
+        record = await self.collection.find_one({
+            "_id": asset_id
+        })
+        
+        if record:
+            return Asset(**record)
+        
+        return None

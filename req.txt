@@ -1,8 +1,0 @@
-wsl --install
-wsl --set-default-version 2
-wsl --version
-wsl --install ubuntu
-cd mnt/DRIVE/path
-wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda3/miniconda.sh
-
-
