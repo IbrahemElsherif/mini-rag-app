@@ -91,25 +91,19 @@ class NLPController(BaseController):
         return results
     
     def answer_rag_question(self, project: Project, query: str, limit: int = 10):
-        
         answer, full_prompt, chat_history = None, None, None
 
-        # Check if this is an identity question
-        identity_questions = ["من انت", "من أنت", "عرف نفسك", "ما هويتك", "من تكون"]
-        if any(q in query.lower() for q in identity_questions):
-            # Return predefined identity without searching documents
-            answer = "أنا مساعد طلاب متدربين المعهد السعودي العالي المتخصص للتدريب، وأنا هنا للإجابة على استفساراتك حول المعهد ودوراته التدريبية ودبلوماته."
-            return answer, "", chat_history
-
-        # Continue with normal document retrieval for other questions
+        # Step 1: retrieve related documents
         retrieved_documents = self.search_vector_db_collection(
             project=project,
             text=query,
             limit=limit,
         )
 
+        # If no documents found or they're empty, return a predefined Arabic response
         if not retrieved_documents or len(retrieved_documents) == 0:
-            return answer, full_prompt, chat_history
+            default_arabic_response = "عذراً، لا توجد لدي معلومات كافية عن هذا الموضوع. يرجى التواصل مع المعهد السعودي العالي للحصول على مزيد من المعلومات."
+            return default_arabic_response, full_prompt, chat_history
         
         # step2: Construct LLM prompt
         system_prompt = self.template_parser.get("rag", "system_prompt")
@@ -142,8 +136,15 @@ class NLPController(BaseController):
             chat_history=chat_history
         )
         
-        # Improved post-processing
+        # After getting the answer, ensure it's in Arabic, not English
         if answer:
+            # Check if the answer contains primarily English text
+            english_ratio = len(re.findall(r'[a-zA-Z]', answer)) / max(len(answer), 1)
+            
+            # If more than 30% of characters are English, replace with Arabic default
+            if english_ratio > 0.3:
+                answer = "عذراً، لا توجد لدي معلومات كافية عن هذا الموضوع. يرجى التواصل مع المعهد السعودي العالي للحصول على مزيد من المعلومات."
+            
             # Remove document markers and headers completely
             answer = re.sub(r'##\s*Document No:\s*\d+.*?##', '', answer, flags=re.DOTALL)
             answer = re.sub(r'Document No:\s*\d+.*?Content:', '', answer, flags=re.DOTALL)

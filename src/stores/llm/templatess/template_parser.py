@@ -1,4 +1,5 @@
 import os
+import re
 
 class TemplateParser:
     
@@ -40,3 +41,11 @@ class TemplateParser:
 
         key_attribute = getattr(module, key)
         return key_attribute.substitute(variables)
+
+    def force_arabic_response(self, response: str):
+        """Force response to be in Arabic if English is detected"""
+        # Check if response contains primarily English
+        english_chars = re.findall(r'[a-zA-Z]', response)
+        if len(english_chars) > len(response) * 0.3:  # If more than 30% is English
+            return "عذراً، لا توجد لدي معلومات كافية عن هذا الموضوع. يرجى التواصل مع المعهد السعودي العالي للحصول على مزيد من المعلومات."
+        return response
