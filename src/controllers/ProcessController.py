@@ -6,6 +6,8 @@ from langchain_community.document_loaders import TextLoader
 from langchain_community.document_loaders import PyMuPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from models import ProcessingEnum
+from langchain_community.document_loaders import JSONLoader
+import json
 
 class ProcessController(BaseController):
     
@@ -32,7 +34,15 @@ class ProcessController(BaseController):
         
         # Check if its txt
         if file_ext == ProcessingEnum.TXT.value:
-            return TextLoader(file_path, encoding="utf-8")
+            with open(file_path, 'r', encoding='utf-8') as f:
+                try:
+                    # Try to parse as JSON
+                    json.loads(f.read())
+                    # If it parses successfully, return a TextLoader with proper encoding
+                    return TextLoader(file_path, encoding="utf-8")
+                except json.JSONDecodeError:
+                    # Not JSON, proceed with regular TextLoader
+                    return TextLoader(file_path, encoding="utf-8")
         # Check if its pdf
         if file_ext == ProcessingEnum.PDF.value:
             return PyMuPDFLoader(file_path)    
@@ -49,7 +59,7 @@ class ProcessController(BaseController):
         return None
     
     def process_file_content(self, file_content: list, file_id: str, 
-                            chunk_size: int=100, overlap_size: int=20):
+                            chunk_size: int=1000, overlap_size: int=200):
     
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=chunk_size,
